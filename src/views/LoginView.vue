@@ -1,5 +1,5 @@
 <template>
-  <v-container class="d-flex justify-center align-center fill-height">
+  <v-container class="login-bg d-flex justify-center align-center fill-height">
     <v-card class="pa-6 rounded-xl" max-width="400">
       <!-- Logo + Title -->
       <div class="text-center mb-4">
@@ -57,6 +57,9 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const roles = ['Admin', 'Scholar', 'Staff']
 const activeTab = ref(0)
@@ -66,6 +69,15 @@ const showPassword = ref(false)
 
 const login = () => {
   console.log('Logging in as:', roles[activeTab.value], username.value, password.value)
-  // TODO: add your authentication & route to dashboard
+
+  router.push('/dashboard')
 }
 </script>
+
+<style scoped>
+.login-bg {
+  background: url('/background.jpg') no-repeat center center;
+  background-size: cover;
+  min-height: 100vh;
+}
+</style>
