@@ -1,3 +1,32 @@
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { requiredValidator, emailValidator } from '@/utils/validators'
+
+const router = useRouter()
+
+const roles = ['Admin', 'Scholar', 'Staff']
+const activeTab = ref(0)
+const email = ref('')
+const password = ref('')
+const showPassword = ref(false)
+const refVForm = ref()
+
+const login = () => {
+  // Simple validation placeholder
+  refVForm.value?.validate().then(({ valid }) => {
+    if (valid) {
+      console.log('Logging in as:', roles[activeTab.value], email.value, password.value)
+      router.push('/dashboard')
+    }
+  })
+}
+
+const goToRegister = () => {
+  router.push('/register')
+}
+</script>
+
 <template>
   <v-container class="login-bg d-flex justify-center align-center fill-height">
     <v-card class="pa-6 rounded-xl" max-width="400">
@@ -16,16 +45,17 @@
       </v-tabs>
 
       <!-- Form -->
-      <v-form @submit.prevent="login">
-        <!-- Username -->
+      <v-form ref="refVForm" @submit.prevent="login">
+        <!-- Email -->
         <v-text-field
-          v-model="username"
-          label="Username"
-          placeholder="Enter username"
+          v-model="email"
+          label="Email"
+          placeholder="Enter Email"
           prepend-inner-icon="mdi-account"
           outlined
           dense
           class="mb-3"
+          :rules="[requiredValidator, emailValidator]"
         />
 
         <!-- Password -->
@@ -40,39 +70,28 @@
           outlined
           dense
           class="mb-4"
+          :rules="[requiredValidator]"
         />
 
         <!-- Login Button -->
         <v-btn type="submit" color="primary" block class="mb-3"> Log In </v-btn>
       </v-form>
 
-      <!-- Forgot Password -->
+      <!-- Forgot Password + Register -->
       <div class="text-center">
         <v-btn variant="text" size="small" color="primary"> Forgot Password? </v-btn>
         <p class="text-caption text-grey mt-2">v1.0.0</p>
+
+        <p class="text-caption mt-4">
+          Don’t have an account?
+          <v-btn variant="text" size="small" color="primary" @click="goToRegister">
+            Register
+          </v-btn>
+        </p>
       </div>
     </v-card>
   </v-container>
 </template>
-
-<script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
-
-const roles = ['Admin', 'Scholar', 'Staff']
-const activeTab = ref(0)
-const username = ref('')
-const password = ref('')
-const showPassword = ref(false)
-
-const login = () => {
-  console.log('Logging in as:', roles[activeTab.value], username.value, password.value)
-
-  router.push('/dashboard')
-}
-</script>
 
 <style scoped>
 .login-bg {
