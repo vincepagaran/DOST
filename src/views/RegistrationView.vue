@@ -1,104 +1,97 @@
 <template>
-  <v-container class="d-flex justify-center align-center fill-height">
-    <v-card class="pa-8 rounded-xl" max-width="600">
-      <!-- Logo + Title -->
-      <div class="text-center mb-6">
-        <v-img src="/logo.png" alt="Logo" contain max-width="80" class="mx-auto mb-2" />
-        <h2 class="font-weight-bold">DOST Caraga</h2>
-        <p class="text-subtitle-2 text-grey">Create Your Account</p>
-      </div>
+  <v-container class="d-flex justify-center align-center" style="height: 100vh">
+    <v-card elevation="10" width="500" class="pa-6 rounded-xl">
+      <v-card-title class="text-center text-h5 font-weight-bold"> Register </v-card-title>
 
-      <!-- Form -->
-      <v-form ref="refVForm" @submit.prevent="register">
-        <v-row dense>
-          <!-- Full Name -->
-          <v-col cols="12" md="6">
-            <v-text-field
-              v-model="fullName"
-              label="Full Name"
-              placeholder="Enter your name"
-              prepend-inner-icon="mdi-account"
-              outlined
-              dense
-              class="mb-3"
-              :rules="[requiredValidator]"
-            />
-          </v-col>
+      <v-form ref="refVForm" @submit.prevent="onFormSubmit">
+        <!-- Firstname -->
+        <v-text-field
+          v-model="formData.firstname"
+          label="First Name"
+          prepend-inner-icon="mdi-account"
+          :rules="[requiredValidator]"
+          outlined
+          dense
+        />
 
-          <!-- Email -->
-          <v-col cols="12" md="6">
-            <v-text-field
-              v-model="email"
-              label="Email"
-              placeholder="Enter your email"
-              prepend-inner-icon="mdi-email"
-              outlined
-              dense
-              class="mb-3"
-              :rules="[requiredValidator, emailValidator]"
-            />
-          </v-col>
+        <!-- Lastname -->
+        <v-text-field
+          v-model="formData.lastname"
+          label="Last Name"
+          prepend-inner-icon="mdi-account"
+          :rules="[requiredValidator]"
+          outlined
+          dense
+        />
 
-          <!-- Username -->
-          <v-col cols="12" md="6">
-            <v-text-field
-              v-model="username"
-              label="Username"
-              placeholder="Choose a username"
-              prepend-inner-icon="mdi-account-circle"
-              outlined
-              dense
-              class="mb-3"
-              :rules="[requiredValidator]"
-            />
-          </v-col>
+        <!-- Email -->
+        <v-text-field
+          v-model="formData.email"
+          label="Email"
+          prepend-inner-icon="mdi-email"
+          :rules="[requiredValidator, emailValidator]"
+          outlined
+          dense
+        />
 
-          <!-- Password -->
-          <v-col cols="12" md="6">
-            <v-text-field
-              v-model="password"
-              :type="showPassword ? 'text' : 'password'"
-              label="Password"
-              placeholder="Enter password"
-              prepend-inner-icon="mdi-lock"
-              :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-              @click:append-inner="showPassword = !showPassword"
-              outlined
-              dense
-              class="mb-3"
-              :rules="[requiredValidator, passwordValidator]"
-            />
-          </v-col>
+        <!-- Password -->
+        <v-text-field
+          v-model="formData.password"
+          label="Password"
+          prepend-inner-icon="mdi-lock"
+          :append-inner-icon="visible ? 'mdi-eye-off' : 'mdi-eye'"
+          :type="visible ? 'text' : 'password'"
+          @click:append-inner="visible = !visible"
+          :rules="[requiredValidator, passwordValidator]"
+          outlined
+          dense
+        />
 
-          <!-- Confirm Password -->
-          <v-col cols="12">
-            <v-text-field
-              v-model="confirmPassword"
-              :type="showConfirmPassword ? 'text' : 'password'"
-              label="Confirm Password"
-              placeholder="Re-enter password"
-              prepend-inner-icon="mdi-lock-check"
-              :append-inner-icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
-              @click:append-inner="showConfirmPassword = !showConfirmPassword"
-              outlined
-              dense
-              class="mb-4"
-              :rules="[requiredValidator, confirmPasswordValidator]"
-            />
-          </v-col>
-        </v-row>
+        <!-- Confirm Password -->
+        <v-text-field
+          v-model="formData.password_confirmation"
+          label="Confirm Password"
+          prepend-inner-icon="mdi-lock-check"
+          :append-inner-icon="visibleConfirm ? 'mdi-eye-off' : 'mdi-eye'"
+          :type="visibleConfirm ? 'text' : 'password'"
+          @click:append-inner="visibleConfirm = !visibleConfirm"
+          :rules="[requiredValidator, (val) => confirmedValidator(val, formData.password)]"
+          outlined
+          dense
+        />
 
-        <!-- Register Button -->
-        <v-btn type="submit" color="primary" block class="mb-3"> Register </v-btn>
+        <!-- Error / Success Messages -->
+        <v-alert
+          v-if="formAction.formErrorMessage"
+          type="error"
+          class="mt-3"
+          border="start"
+          prominent
+        >
+          {{ formAction.formErrorMessage }}
+        </v-alert>
+
+        <v-alert
+          v-if="formAction.formSuccessMessage"
+          type="success"
+          class="mt-3"
+          border="start"
+          prominent
+        >
+          {{ formAction.formSuccessMessage }}
+        </v-alert>
+
+        <!-- Submit Button -->
+        <v-btn :loading="formAction.formProcess" color="primary" class="mt-4" block type="submit">
+          Register
+        </v-btn>
       </v-form>
 
-      <!-- Already have account -->
-      <div class="text-center">
+      <!-- Already have an account? -->
+      <div class="text-center mt-4">
         <p class="text-caption">
           Already have an account?
-          <v-btn variant="text" size="small" color="primary" @click="$router.push('/')">
-            Log In
-          </v-btn>
+          <v-btn variant="text" size="small" color="primary" @click="goToLogin"> Log In </v-btn>
         </p>
       </div>
     </v-card>
@@ -107,38 +100,67 @@
 
 <script setup>
 import { ref } from 'vue'
-import { requiredValidator, emailValidator } from '@/utils/validators'
+import {
+  requiredValidator,
+  emailValidator,
+  passwordValidator,
+  confirmedValidator,
+} from '@/utils/validators'
+import { supabase, formActionDefault } from '@/utils/supabase'
+import { useRouter } from 'vue-router'
 
-const fullName = ref('')
-const email = ref('')
-const username = ref('')
-const password = ref('')
-const confirmPassword = ref('')
-const showPassword = ref(false)
-const showConfirmPassword = ref(false)
+const router = useRouter()
+const visible = ref(false)
+const visibleConfirm = ref(false)
+const refVForm = ref()
 
-const refVForm = ref(null)
+const formDataDefault = {
+  firstname: '',
+  lastname: '',
+  email: '',
+  password: '',
+  password_confirmation: '',
+}
 
-// Custom password validator (min 6 chars as example)
-const passwordValidator = (value) => value?.length >= 6 || 'Password must be at least 6 characters'
+const formData = ref({ ...formDataDefault })
+const formAction = ref({ ...formActionDefault })
 
-// Confirm password validator
-const confirmPasswordValidator = (value) => value === password.value || 'Passwords do not match'
+const onSubmit = async () => {
+  formAction.value = { ...formActionDefault }
+  formAction.value.formProcess = true
 
-const register = () => {
-  refVForm.value?.validate().then(({ valid }) => {
-    if (valid) {
-      console.log('Registering:', {
-        fullName: fullName.value,
-        email: email.value,
-        username: username.value,
-        password: password.value,
-      })
-
-      // TODO: send data to backend
-      alert('Registration successful!')
-      window.location.href = '/'
-    }
+  const { data, error } = await supabase.auth.signUp({
+    email: formData.value.email,
+    password: formData.value.password,
+    options: {
+      data: {
+        firstname: formData.value.firstname,
+        lastname: formData.value.lastname,
+      },
+    },
   })
+
+  if (error) {
+    console.log(error)
+    formAction.value.formErrorMessage = error.message
+    formAction.value.formProcess = false
+  } else if (data) {
+    console.log(data)
+    formAction.value.formSuccessMessage = 'Successfully Registered.'
+    router.replace('/')
+  }
+
+  refVForm.value?.reset()
+  formAction.value.formProcess = false
+}
+
+const onFormSubmit = () => {
+  refVForm.value?.validate().then(({ valid }) => {
+    if (valid) onSubmit()
+  })
+}
+
+const goToLogin = () => {
+  router.push('/')
 }
 </script>

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { requiredValidator, emailValidator } from '@/utils/validators'
+import { supabase } from '@/utils/supabase' // 👈 make sure supabase client is set up
 
 const router = useRouter()
 
@@ -12,12 +13,30 @@ const password = ref('')
 const showPassword = ref(false)
 const refVForm = ref()
 
-const login = () => {
-  // Simple validation placeholder
-  refVForm.value?.validate().then(({ valid }) => {
+// For error/success messages
+const errorMessage = ref('')
+const loading = ref(false)
+
+const login = async () => {
+  errorMessage.value = ''
+  refVForm.value?.validate().then(async ({ valid }) => {
     if (valid) {
-      console.log('Logging in as:', roles[activeTab.value], email.value, password.value)
-      router.push('/dashboard')
+      loading.value = true
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.value,
+        password: password.value,
+      })
+
+      if (error) {
+        console.error(error.message)
+        errorMessage.value = 'Invalid email or password'
+      } else if (data?.user) {
+        console.log('Logged in as:', roles[activeTab.value], data.user)
+        router.push('/dashboard') // 👈 redirect if login successful
+      }
+
+      loading.value = false
     }
   })
 }
@@ -73,8 +92,13 @@ const goToRegister = () => {
           :rules="[requiredValidator]"
         />
 
+        <!-- Error Message -->
+        <v-alert v-if="errorMessage" type="error" border="start" class="mb-3" prominent>
+          {{ errorMessage }}
+        </v-alert>
+
         <!-- Login Button -->
-        <v-btn type="submit" color="primary" block class="mb-3"> Log In </v-btn>
+        <v-btn :loading="loading" type="submit" color="primary" block class="mb-3"> Log In </v-btn>
       </v-form>
 
       <!-- Forgot Password + Register -->
