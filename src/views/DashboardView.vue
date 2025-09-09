@@ -5,7 +5,7 @@
         <!-- Header -->
         <div class="d-flex justify-space-between align-center mb-4">
           <h2 class="font-weight-bold">Dashboard</h2>
-          <v-btn icon>
+          <v-btn icon @click="profileDialog = true">
             <v-icon>mdi-account-circle</v-icon>
           </v-btn>
         </div>
@@ -81,15 +81,39 @@
           Settings
         </v-btn>
       </v-bottom-navigation>
+
+      <!-- Profile Dialog -->
+      <v-dialog v-model="profileDialog" max-width="400">
+        <v-card class="pa-4 rounded-xl">
+          <v-card-title class="text-h6 font-weight-bold">
+            <v-icon left class="mr-2">mdi-account</v-icon>
+            Profile
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text>
+            <p><strong>First Name:</strong> {{ user.firstname }}</p>
+            <p><strong>Last Name:</strong> {{ user.lastname }}</p>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn color="error" @click="logout" block>Logout</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </v-main>
   </v-app>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { supabase } from '@/utils/supabase'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const totalDocs = ref(156)
 const verifiedDocs = ref(124)
+const nav = ref('home')
 
 const activities = ref([
   { name: 'Passport Scan.pdf', status: 'Verified', statusColor: 'success', time: '2h ago' },
@@ -97,5 +121,26 @@ const activities = ref([
   { name: 'Driver License.pdf', status: 'Rejected', statusColor: 'error', time: '5h ago' },
 ])
 
-const nav = ref('home')
+const profileDialog = ref(false)
+const user = ref({ firstname: '', lastname: '', email: '' })
+
+// Fetch logged-in user
+onMounted(async () => {
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data?.user) {
+    router.push('/') // if no user, redirect to login
+  } else {
+    const metadata = data.user.user_metadata
+    user.value = {
+      firstname: metadata.firstname,
+      lastname: metadata.lastname,
+      email: data.user.email,
+    }
+  }
+})
+
+const logout = async () => {
+  await supabase.auth.signOut()
+  router.push('/')
+}
 </script>
