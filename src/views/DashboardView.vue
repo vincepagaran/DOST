@@ -36,7 +36,6 @@
               Upload Document
             </v-btn>
           </v-col>
-
           <v-col cols="6">
             <v-btn color="grey-lighten-2" block @click="$router.push('/history')">
               <v-icon left>mdi-history</v-icon>
@@ -55,9 +54,13 @@
 
             <v-list-item-title>{{ item.name }}</v-list-item-title>
             <v-list-item-subtitle>
-              <v-icon size="16" :color="item.statusColor" class="mr-1"> mdi-circle </v-icon>
-              {{ item.status }} • {{ item.time }}
+              <v-icon size="16" :color="statusColor(item.status)" class="mr-1"> mdi-circle </v-icon>
+              {{ item.status }} • {{ formatTime(item.created_at) }}
             </v-list-item-subtitle>
+          </v-list-item>
+
+          <v-list-item v-if="activities.length === 0">
+            <v-list-item-title class="text-grey">No recent activity</v-list-item-title>
           </v-list-item>
         </v-list>
       </v-container>
@@ -111,33 +114,59 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-const totalDocs = ref(156)
-const verifiedDocs = ref(124)
+// Stats
+const totalDocs = ref(0)
+const verifiedDocs = ref(0)
+const activities = ref([])
+
 const nav = ref('home')
-
-const activities = ref([
-  { name: 'Passport Scan.pdf', status: 'Verified', statusColor: 'success', time: '2h ago' },
-  { name: 'ID Card.pdf', status: 'Pending', statusColor: 'warning', time: '3h ago' },
-  { name: 'Driver License.pdf', status: 'Rejected', statusColor: 'error', time: '5h ago' },
-])
-
 const profileDialog = ref(false)
 const user = ref({ firstname: '', lastname: '', email: '' })
 
-// Fetch logged-in user
+// Fetch logged-in user + documents
 onMounted(async () => {
-  const { data, error } = await supabase.auth.getUser()
-  if (error || !data?.user) {
-    router.push('/') // if no user, redirect to login
+  const { data: authData, error } = await supabase.auth.getUser()
+  if (error || !authData?.user) {
+    router.push('/') // redirect to login
   } else {
-    const metadata = data.user.user_metadata
+    const metadata = authData.user.user_metadata
     user.value = {
       firstname: metadata.firstname,
       lastname: metadata.lastname,
-      email: data.user.email,
+      email: authData.user.email,
+    }
+
+    // Fetch documents for this user
+    const { data: docs, error: docsError } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('user_id', authData.user.id)
+      .order('created_at', { ascending: false })
+
+    if (!docsError && docs) {
+      totalDocs.value = docs.length
+      verifiedDocs.value = docs.filter((d) => d.status === 'Verified').length
+      activities.value = docs.slice(0, 5) // show last 5
     }
   }
 })
+
+const statusColor = (status) => {
+  switch (status) {
+    case 'Verified':
+      return 'success'
+    case 'Pending':
+      return 'warning'
+    case 'Rejected':
+      return 'error'
+    default:
+      return 'grey'
+  }
+}
+
+const formatTime = (date) => {
+  return new Date(date).toLocaleString()
+}
 
 const logout = async () => {
   await supabase.auth.signOut()
