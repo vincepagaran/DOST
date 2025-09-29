@@ -48,7 +48,7 @@ const login = async () => {
         return
       }
 
-      // Step 2: fetch the user role from "users" table
+      // Step 2: fetch role from "users" table
       const { data: profile, error: profileError } = await supabase
         .from('users')
         .select('role')
@@ -65,7 +65,7 @@ const login = async () => {
       const selectedRole = roles[activeTab.value]
       const userRole = profile?.role
 
-      // Step 3: check if role matches the selected tab
+      // Step 3: check if role matches
       if (userRole !== selectedRole) {
         errorMessage.value = `You are registered as "${userRole}", not "${selectedRole}".`
         await supabase.auth.signOut()
@@ -73,15 +73,18 @@ const login = async () => {
         return
       }
 
-      // ✅ Role matches → allow login
-      console.log('Logged in as:', userRole, user)
-      router.push('/dashboard')
+      // ✅ Redirect based on role
+      if (userRole === 'Admin') {
+        router.push('/admin')
+      } else {
+        router.push('/dashboard')
+      }
     } catch (err) {
       console.error('Unexpected login error:', err)
       errorMessage.value = 'Something went wrong'
+    } finally {
+      loading.value = false
     }
-
-    loading.value = false
   })
 }
 
