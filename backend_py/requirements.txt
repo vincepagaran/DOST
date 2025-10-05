@@ -1,0 +1,9 @@
+# backend_py/requirements.txt
+fastapi
+uvicorn[standard]
+python-multipart
+pdfminer.six
+pydantic
+pymupdf
+pillow
+pytesseract
