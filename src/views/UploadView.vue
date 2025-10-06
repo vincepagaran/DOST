@@ -2,43 +2,41 @@
   <v-app>
     <v-main>
       <v-container class="pa-4">
-        <div class="d-flex align-center mb-6">
-          <v-btn icon @click="goBack">
-            <v-icon>mdi-arrow-left</v-icon>
-          </v-btn>
-          <h3 class="ml-2 font-weight-bold">Upload Documents</h3>
+        <!-- Header -->
+        <div class="flex align-center mb-6 d-flex">
+          <v-btn icon @click="goBack"><v-icon>mdi-arrow-left</v-icon></v-btn>
+          <h3 class="ml-2 font-weight-bold">Upload Form A</h3>
         </div>
 
         <v-row>
+          <!-- Uploader -->
           <v-col cols="12" md="6">
             <v-card outlined class="pa-4">
-              <h4 class="mb-4">Form A</h4>
+              <h4 class="mb-4">I. PERSONAL DATA + II & III Checks</h4>
 
-              <!-- Upload Area (PDF or Image) -->
               <v-card
                 outlined
                 class="pa-6 mb-3 text-center d-flex flex-column align-center justify-center"
                 height="160"
                 style="cursor: pointer"
-                @click="triggerFileInput('Form A')"
+                @click="triggerInput"
               >
                 <v-icon size="40" color="primary">mdi-upload</v-icon>
                 <p class="mt-2">Click to upload</p>
                 <p class="text-caption">PDF or Image (max 10MB)</p>
                 <input
+                  ref="fileInput"
                   type="file"
-                  :ref="(el) => (fileInputs['Form A'] = el)"
-                  accept=".pdf,application/pdf,image/*"
                   class="d-none"
-                  @change="handleFileUpload($event, 'Form A')"
+                  accept=".pdf,application/pdf,image/*"
+                  @change="onFile"
                 />
               </v-card>
 
-              <!-- Preview -->
               <v-card outlined class="pa-4 text-center">
-                <div v-if="files['Form A']">
+                <div v-if="file">
                   <v-icon size="28" color="primary">mdi-file</v-icon>
-                  <p class="mt-2">{{ files['Form A'].name }}</p>
+                  <p class="mt-2">{{ file.name }}</p>
                 </div>
                 <div v-else>
                   <v-icon size="28" color="grey">mdi-file-remove</v-icon>
@@ -46,29 +44,77 @@
                 </div>
               </v-card>
 
-              <!-- Start Validation -->
               <v-btn
                 color="primary"
                 block
                 class="mt-4"
-                :disabled="!files['Form A']"
-                @click="startValidation('Form A')"
+                :disabled="!file || loading"
+                :loading="loading"
+                @click="startValidation"
               >
                 Start Validation
               </v-btn>
+            </v-card>
+          </v-col>
 
-              <!-- Validation Result -->
-              <div v-if="results['Form A']" class="mt-3 text-left">
-                <div v-if="results['Form A'].valid" class="text-success">
-                  ✅ {{ results['Form A'].message }}
+          <!-- Status / Missing-only Panel -->
+          <v-col cols="12" md="6" v-if="panel.visible">
+            <v-card class="pa-5">
+              <div class="d-flex justify-space-between align-start">
+                <div>
+                  <h4 class="text-h6 mb-1">Application Status</h4>
+                  <div class="text-body-2 text-medium-emphasis">Document Submission Progress</div>
                 </div>
-                <div v-else class="text-error">
-                  ❌ {{ results['Form A'].reason }}
-                  <ul v-if="results['Form A'].details" class="mt-2">
-                    <li v-for="(msg, key) in results['Form A'].details" :key="key">• {{ msg }}</li>
-                  </ul>
+                <div class="d-flex flex-column align-center">
+                  <v-progress-circular
+                    :model-value="panel.percent"
+                    :size="88"
+                    :width="10"
+                    color="primary"
+                  >
+                    <div class="text-subtitle-1 font-weight-bold">{{ panel.percent }}%</div>
+                  </v-progress-circular>
+                  <div class="text-caption mt-2">
+                    {{ panel.complete }} of {{ panel.total }} verified
+                  </div>
                 </div>
               </div>
+
+              <v-divider class="my-4" />
+
+              <h4 class="text-h6 font-weight-bold">MISSING FIELDS</h4>
+
+              <!-- I. PERSONAL DATA -->
+              <div v-if="panel.personal.length" class="mt-4">
+                <div class="text-subtitle-2 mb-2">I. PERSONAL DATA</div>
+                <ul class="mt-1">
+                  <li v-for="f in panel.personal" :key="f">{{ f }}</li>
+                </ul>
+              </div>
+
+              <!-- II. FAMILY DATA -->
+              <div v-if="panel.family.length" class="mt-4">
+                <div class="text-subtitle-2 mb-2">II. FAMILY DATA</div>
+                <ul class="mt-1">
+                  <li v-for="f in panel.family" :key="f">{{ f }}</li>
+                </ul>
+              </div>
+
+              <!-- III. FINANCIAL CONTRIBUTION -->
+              <div v-if="panel.financial.length" class="mt-4">
+                <div class="text-subtitle-2 mb-2">III. FINANCIAL CONTRIBUTION</div>
+                <ul class="mt-1">
+                  <li v-for="f in panel.financial" :key="f">{{ f }}</li>
+                </ul>
+              </div>
+
+              <v-alert
+                v-if="!panel.personal.length && !panel.family.length && !panel.financial.length"
+                type="success"
+                variant="tonal"
+                class="mt-4"
+                text="No missing fields detected in Form A."
+              />
             </v-card>
           </v-col>
         </v-row>
@@ -78,47 +124,49 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const files = ref({})
-const results = ref({})
-const fileInputs = {}
+const file = ref(null)
+const fileInput = ref(null)
+const loading = ref(false)
+
+const panel = reactive({
+  visible: false,
+  personal: [],
+  family: [],
+  financial: [],
+  total: 0,
+  complete: 0,
+  percent: 0,
+})
 
 const goBack = () => router.back()
+const triggerInput = () => fileInput.value?.click()
 
-const triggerFileInput = (form) => fileInputs[form]?.click()
-
-const handleFileUpload = (event, form) => {
-  const selectedFile = event.target.files[0]
-  if (!selectedFile) return
-
-  if (selectedFile.size > 10 * 1024 * 1024) {
+const onFile = (e) => {
+  const f = e.target.files[0]
+  if (!f) return
+  if (f.size > 10 * 1024 * 1024) {
     alert('File is too large (max 10MB).')
-    event.target.value = ''
     return
   }
-
-  files.value[form] = selectedFile
+  file.value = f
 }
 
-const startValidation = async (form) => {
-  if (!files.value[form]) {
-    alert('Please upload a document for Form A.')
-    return
-  }
-
-  const formData = new FormData()
-  formData.append('file', files.value[form])
+const startValidation = async () => {
+  if (!file.value) return
+  loading.value = true
+  const fd = new FormData()
+  fd.append('file', file.value)
 
   try {
+    // if you set a Vite proxy to 8000, change URL to '/api/validate/formA'
     const res = await fetch('http://localhost:8000/api/validate/formA', {
       method: 'POST',
-      body: formData,
+      body: fd,
     })
-
-    // Try to read JSON; if it fails, make a generic object
     let data
     try {
       data = await res.json()
@@ -126,36 +174,24 @@ const startValidation = async (form) => {
       data = {}
     }
 
-    // Handle HTTP errors from FastAPI (it returns { detail: "..." })
     if (!res.ok) {
-      const msg = data.detail || 'Server error'
-      results.value[form] = { valid: false, reason: msg }
-      alert('Validation failed: ' + msg)
+      alert(data.detail || 'Server error')
       return
     }
 
-    // Normal success/fail payload from our validator
-    results.value[form] = data
-
-    if (data.valid) {
-      alert(data.message || 'Validation OK')
-    } else {
-      // Prefer detailed errors; fall back to reason; fall back to detail
-      let more = ''
-      if (data.details) {
-        // support both {field: "msg"} and {missing_anchors: [...]}
-        if (Array.isArray(data.details.missing_anchors)) {
-          more = 'Missing anchors: ' + data.details.missing_anchors.join(', ')
-        } else {
-          more = Object.values(data.details).filter(Boolean).join('; ')
-        }
-      }
-      more = more || data.reason || data.detail || 'Unknown validation error'
-      alert('Validation failed: ' + more)
-    }
-  } catch (err) {
-    console.error(err)
+    // build panel
+    panel.personal = data?.missing_fields?.personal || []
+    panel.family = data?.missing_fields?.family || []
+    panel.financial = data?.missing_fields?.financial || []
+    panel.total = data?.stats?.total || 0
+    panel.complete = data?.stats?.complete || 0
+    panel.percent = data?.stats?.percent || 0
+    panel.visible = true
+  } catch (e) {
+    console.error(e)
     alert('Error connecting to validation server')
+  } finally {
+    loading.value = false
   }
 }
 </script>

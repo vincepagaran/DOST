@@ -1,3 +1,4 @@
+# backend_py/app/main.py
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.validators.form_a import validate_form_a, extract_text_from_image
@@ -11,10 +12,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.get("/")
-def root():
-    return {"ok": True, "service": "DOST Validator API", "endpoints": ["/api/validate/formA"]}
 
 @app.get("/health")
 def health():
@@ -39,7 +36,7 @@ async def validate_form_a_endpoint(file: UploadFile = File(...)):
         text = extract_text_from_image(blob)
         if not text or len(text) < 50:
             raise HTTPException(status_code=400, detail="Could not extract readable text from image. Please upload a clearer photo/scan.")
-        return validate_form_a(None, ocr_text=text)
+        return validate_form_a(None, ocr_text=text, image_bytes=blob)
 
     # PDF path
-    return validate_form_a(blob)
+    return validate_form_a(blob, image_bytes=None)
