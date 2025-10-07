@@ -1,120 +1,162 @@
 <template>
   <v-app>
     <v-main>
-      <v-container class="pa-4">
-        <!-- Header -->
-        <div class="flex align-center mb-6 d-flex">
-          <v-btn icon @click="goBack"><v-icon>mdi-arrow-left</v-icon></v-btn>
+      <v-container class="py-6">
+        <div class="d-flex align-center mb-6">
+          <v-btn icon @click="goBack">
+            <v-icon>mdi-arrow-left</v-icon>
+          </v-btn>
           <h3 class="ml-2 font-weight-bold">Upload Form A</h3>
         </div>
 
         <v-row>
-          <!-- Uploader -->
+          <!-- LEFT -->
           <v-col cols="12" md="6">
-            <v-card outlined class="pa-4">
-              <h4 class="mb-4">I. PERSONAL DATA + II & III Checks</h4>
+            <v-card variant="outlined" class="pa-5">
+              <h4 class="mb-4">Upload your Form A (PDF or Image)</h4>
 
               <v-card
-                outlined
-                class="pa-6 mb-3 text-center d-flex flex-column align-center justify-center"
-                height="160"
+                variant="outlined"
+                class="pa-8 mb-4 text-center d-flex flex-column align-center justify-center"
+                height="200"
                 style="cursor: pointer"
-                @click="triggerInput"
+                @click="triggerFileInput"
               >
-                <v-icon size="40" color="primary">mdi-upload</v-icon>
-                <p class="mt-2">Click to upload</p>
-                <p class="text-caption">PDF or Image (max 10MB)</p>
+                <v-icon size="48" color="primary">mdi-upload</v-icon>
+                <div class="mt-3">Click to upload</div>
+                <div class="text-caption">PDF or Image (max 10MB)</div>
                 <input
-                  ref="fileInput"
                   type="file"
+                  ref="fileInput"
+                  accept=".pdf, .jpg, .jpeg, .png"
                   class="d-none"
-                  accept=".pdf,application/pdf,image/*"
-                  @change="onFile"
+                  @change="handleFileChange"
                 />
               </v-card>
 
-              <v-card outlined class="pa-4 text-center">
+              <v-card variant="outlined" class="pa-4">
                 <div v-if="file">
-                  <v-icon size="28" color="primary">mdi-file</v-icon>
-                  <p class="mt-2">{{ file.name }}</p>
+                  <v-icon size="24" color="primary">mdi-file</v-icon>
+                  <span class="ml-2">{{ file.name }}</span>
                 </div>
                 <div v-else>
-                  <v-icon size="28" color="grey">mdi-file-remove</v-icon>
-                  <p class="mt-2">No document uploaded</p>
+                  <v-icon size="24" color="grey">mdi-file-remove</v-icon>
+                  <span class="ml-2">No document uploaded</span>
                 </div>
               </v-card>
 
               <v-btn
                 color="primary"
-                block
                 class="mt-4"
-                :disabled="!file || loading"
+                block
                 :loading="loading"
+                :disabled="!file || loading"
                 @click="startValidation"
               >
-                Start Validation
+                START VALIDATION
               </v-btn>
+
+              <v-alert
+                v-if="serverError"
+                type="error"
+                class="mt-4"
+                density="comfortable"
+                border
+                variant="tonal"
+              >
+                {{ serverError }}
+              </v-alert>
             </v-card>
           </v-col>
 
-          <!-- Status / Missing-only Panel -->
-          <v-col cols="12" md="6" v-if="panel.visible">
-            <v-card class="pa-5">
-              <div class="d-flex justify-space-between align-start">
+          <!-- RIGHT -->
+          <v-col cols="12" md="6">
+            <v-card variant="outlined" class="pa-5">
+              <div class="d-flex justify-space-between align-center">
                 <div>
-                  <h4 class="text-h6 mb-1">Application Status</h4>
-                  <div class="text-body-2 text-medium-emphasis">Document Submission Progress</div>
+                  <h4 class="mb-1">Application Status</h4>
+                  <div class="text-medium-emphasis">Document Submission Progress</div>
                 </div>
-                <div class="d-flex flex-column align-center">
+                <div class="d-flex align-center">
                   <v-progress-circular
-                    :model-value="panel.percent"
-                    :size="88"
+                    :model-value="progressPercent"
+                    :size="90"
                     :width="10"
                     color="primary"
                   >
-                    <div class="text-subtitle-1 font-weight-bold">{{ panel.percent }}%</div>
+                    <span class="text-h6">{{ progressPercent }}%</span>
                   </v-progress-circular>
-                  <div class="text-caption mt-2">
-                    {{ panel.complete }} of {{ panel.total }} verified
-                  </div>
                 </div>
               </div>
-
-              <v-divider class="my-4" />
-
-              <h4 class="text-h6 font-weight-bold">MISSING FIELDS</h4>
-
-              <!-- I. PERSONAL DATA -->
-              <div v-if="panel.personal.length" class="mt-4">
-                <div class="text-subtitle-2 mb-2">I. PERSONAL DATA</div>
-                <ul class="mt-1">
-                  <li v-for="f in panel.personal" :key="f">{{ f }}</li>
-                </ul>
+              <div class="text-right mt-2 text-medium-emphasis">
+                {{ verifiedCount }} of {{ totalCount }} verified
               </div>
 
-              <!-- II. FAMILY DATA -->
-              <div v-if="panel.family.length" class="mt-4">
-                <div class="text-subtitle-2 mb-2">II. FAMILY DATA</div>
-                <ul class="mt-1">
-                  <li v-for="f in panel.family" :key="f">{{ f }}</li>
-                </ul>
+              <v-divider class="my-5"></v-divider>
+
+              <h4 class="mb-3">MISSING FIELDS</h4>
+
+              <div v-if="noResultsYet" class="text-medium-emphasis">
+                Upload a file and click <strong>Start Validation</strong>.
               </div>
 
-              <!-- III. FINANCIAL CONTRIBUTION -->
-              <div v-if="panel.financial.length" class="mt-4">
-                <div class="text-subtitle-2 mb-2">III. FINANCIAL CONTRIBUTION</div>
-                <ul class="mt-1">
-                  <li v-for="f in panel.financial" :key="f">{{ f }}</li>
-                </ul>
-              </div>
+              <div v-else>
+                <v-alert
+                  v-if="allComplete"
+                  type="success"
+                  variant="tonal"
+                  border
+                  density="comfortable"
+                  class="mb-4"
+                >
+                  Form A looks valid. All required fields are present.
+                </v-alert>
 
-              <v-alert
-                v-if="!panel.personal.length && !panel.family.length && !panel.financial.length"
-                type="success"
-                variant="tonal"
-                class="mt-4"
-                text="No missing fields detected in Form A."
-              />
+                <template v-else>
+                  <div class="mb-4" v-if="missing.personal.length">
+                    <div class="text-subtitle-1 font-weight-bold">I. PERSONAL DATA</div>
+                    <ul class="mt-2">
+                      <li v-for="(item, i) in missing.personal" :key="'mp' + i">{{ item }}</li>
+                    </ul>
+                  </div>
+
+                  <div class="mb-4" v-if="missing.family.length">
+                    <div class="text-subtitle-1 font-weight-bold">II. FAMILY DATA</div>
+                    <ul class="mt-2">
+                      <li v-for="(item, i) in missing.family" :key="'mf' + i">{{ item }}</li>
+                    </ul>
+                  </div>
+
+                  <div v-if="missing.financial.length">
+                    <div class="text-subtitle-1 font-weight-bold">III. FINANCIAL CONTRIBUTION</div>
+                    <ul class="mt-2">
+                      <li v-for="(item, i) in missing.financial" :key="'mfi' + i">{{ item }}</li>
+                    </ul>
+                  </div>
+                </template>
+
+                <v-divider class="my-5"></v-divider>
+
+                <h4 class="mb-3">FILLED FIELDS</h4>
+                <div class="mb-4" v-if="filled.personal.length">
+                  <div class="text-subtitle-1 font-weight-bold">I. PERSONAL DATA</div>
+                  <ul class="mt-2">
+                    <li v-for="(item, i) in filled.personal" :key="'fp' + i">{{ item }}</li>
+                  </ul>
+                </div>
+                <div class="mb-4" v-if="filled.family.length">
+                  <div class="text-subtitle-1 font-weight-bold">II. FAMILY DATA</div>
+                  <ul class="mt-2">
+                    <li v-for="(item, i) in filled.family" :key="'ff' + i">{{ item }}</li>
+                  </ul>
+                </div>
+                <div v-if="filled.financial.length">
+                  <div class="text-subtitle-1 font-weight-bold">III. FINANCIAL CONTRIBUTION</div>
+                  <ul class="mt-2">
+                    <li v-for="(item, i) in filled.financial" :key="'ffi' + i">{{ item }}</li>
+                  </ul>
+                </div>
+              </div>
             </v-card>
           </v-col>
         </v-row>
@@ -124,74 +166,96 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+
 const file = ref(null)
 const fileInput = ref(null)
 const loading = ref(false)
+const serverError = ref('')
 
-const panel = reactive({
-  visible: false,
-  personal: [],
-  family: [],
-  financial: [],
-  total: 0,
-  complete: 0,
-  percent: 0,
-})
+const result = ref(null)
+
+const noResultsYet = computed(() => result.value === null)
+const totalCount = computed(() => result.value?.stats?.total ?? 0)
+const verifiedCount = computed(() => result.value?.stats?.complete ?? 0)
+const progressPercent = computed(() => result.value?.stats?.percent ?? 0)
+const allComplete = computed(() => !noResultsYet.value && verifiedCount.value === totalCount.value)
+
+const missing = computed(() => ({
+  personal: result.value?.missing_fields?.personal ?? [],
+  family: result.value?.missing_fields?.family ?? [],
+  financial: result.value?.missing_fields?.financial ?? [],
+}))
+
+const filled = computed(() => ({
+  personal: result.value?.filled_fields?.personal ?? [],
+  family: result.value?.filled_fields?.family ?? [],
+  financial: result.value?.filled_fields?.financial ?? [],
+}))
 
 const goBack = () => router.back()
-const triggerInput = () => fileInput.value?.click()
+const triggerFileInput = () => fileInput.value?.click()
 
-const onFile = (e) => {
-  const f = e.target.files[0]
+const handleFileChange = (e) => {
+  serverError.value = ''
+  const f = e.target.files?.[0]
   if (!f) return
+  const okType =
+    /application\/pdf|image\/jpeg|image\/png/i.test(f.type) || /\.(pdf|jpg|jpeg|png)$/i.test(f.name)
+  if (!okType) {
+    serverError.value = 'Only PDF, JPG or PNG files are allowed.'
+    file.value = null
+    return
+  }
   if (f.size > 10 * 1024 * 1024) {
-    alert('File is too large (max 10MB).')
+    serverError.value = 'File is too large (max 10MB).'
+    file.value = null
     return
   }
   file.value = f
 }
 
 const startValidation = async () => {
-  if (!file.value) return
+  serverError.value = ''
+  if (!file.value) {
+    serverError.value = 'Please upload a file first.'
+    return
+  }
+  const formData = new FormData()
+  formData.append('file', file.value)
   loading.value = true
-  const fd = new FormData()
-  fd.append('file', file.value)
-
   try {
-    // if you set a Vite proxy to 8000, change URL to '/api/validate/formA'
-    const res = await fetch('http://localhost:8000/api/validate/formA', {
+    // thanks to Vite proxy, this reaches FastAPI w/o CORS
+    const res = await fetch('/api/validate/formA?debug=0', {
       method: 'POST',
-      body: fd,
+      body: formData,
     })
-    let data
-    try {
-      data = await res.json()
-    } catch {
-      data = {}
-    }
-
+    const data = await res.json()
     if (!res.ok) {
-      alert(data.detail || 'Server error')
+      console.error('Server error:', data)
+      serverError.value = data.detail || data.reason || 'Server error. Check backend console.'
+      result.value = {
+        stats: { total: 0, complete: 0, percent: 0 },
+        missing_fields: { personal: [], family: [], financial: [] },
+        filled_fields: { personal: [], family: [], financial: [] },
+      }
       return
     }
-
-    // build panel
-    panel.personal = data?.missing_fields?.personal || []
-    panel.family = data?.missing_fields?.family || []
-    panel.financial = data?.missing_fields?.financial || []
-    panel.total = data?.stats?.total || 0
-    panel.complete = data?.stats?.complete || 0
-    panel.percent = data?.stats?.percent || 0
-    panel.visible = true
-  } catch (e) {
-    console.error(e)
-    alert('Error connecting to validation server')
+    result.value = data
+  } catch (err) {
+    console.error(err)
+    serverError.value = 'Could not reach the validation server. Is it running?'
   } finally {
     loading.value = false
   }
 }
 </script>
+
+<style scoped>
+.text-medium-emphasis {
+  opacity: 0.7;
+}
+</style>
